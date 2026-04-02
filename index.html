@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voting System - Ramanathapuram</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --background: #f3f4f6;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #a78bfa 0%, #4f46e5 100%);
+            color: var(--text-main);
+            padding: 20px;
+        }
+
+        .unauthorized {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #ef4444;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 40px 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            display: none; /* hidden until validated */
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: var(--text-main);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            background: #fff;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .form-control:disabled {
+            background: #f9fafb;
+            color: var(--text-muted);
+            cursor: not-allowed;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .radio-label {
+            flex: 1;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .radio-label input {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .radio-card {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+            background: #fff;
+        }
+
+        .radio-label input:checked + .radio-card {
+            border-color: var(--primary);
+            background: rgba(79, 70, 229, 0.05);
+            color: var(--primary);
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            margin-top: 10px;
+        }
+
+        .btn-submit:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-submit:active {
+            transform: scale(0.98);
+        }
+
+        .btn-submit:disabled {
+            background: #a5b4fc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Firebase App Check Recaptcha Notice */
+        .grecaptcha-badge { 
+            visibility: hidden; 
+        }
+    </style>
+</head>
+<body>
+
+    <div id="unauthorizedMsg" class="unauthorized" style="display: none;">
+        <span>🚫 Unauthorized Access</span>
+    </div>
+
+    <div id="appContainer" class="container">
+        <div class="header">
+            <h1>Cast Your Vote</h1>
+            <p>Ramanathapuram Digital Voting Portal</p>
+        </div>
+
+        <form id="votingForm">
+            <div class="form-group">
+                <label for="district">District</label>
+                <input type="text" id="district" class="form-control" value="Ramanathapuram" disabled>
+            </div>
+
+            <div class="form-group">
+                <label for="name">Full Name</label>
+                <input type="text" id="name" class="form-control" placeholder="Enter your name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="mobile">Mobile Number</label>
+                <input type="tel" id="mobile" class="form-control" placeholder="10-digit mobile number" pattern="[0-9]{10}" maxlength="10" required autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label>Your Vote</label>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio" name="voteOption" value="Yes" required>
+                        <div class="radio-card">Yes</div>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="voteOption" value="No" required>
+                        <div class="radio-card">No</div>
+                    </label>
+                </div>
+            </div>
+
+            <button type="submit" id="submitBtn" class="btn-submit">Submit Vote</button>
+        </form>
+    </div>
+
+    <!-- Firebase v10 Modular SDK via CDN -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, query, where, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
+        import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-appcheck.js";
+
+        // Access Control Logic
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('vote') !== 'ramnad2026') {
+            document.getElementById('unauthorizedMsg').style.display = 'block';
+            throw new Error("Unauthorized Access");
+        }
+        
+        // Show App if authorized
+        document.getElementById('appContainer').style.display = 'block';
+
+        // Check Device LocalStorage for existing vote
+        if (localStorage.getItem('hasVoted_ramnad2026')) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Already Voted',
+                text: 'You have already casted a vote from this device.',
+                allowOutsideClick: false,
+                showConfirmButton: false
+            });
+            document.getElementById('submitBtn').disabled = true;
+        }
+
+        // ==========================================
+        // FIREBASE CONFIGURATION (Replace with yours)
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        let app, db, appCheck;
+
+        try {
+            // Initialize Firebase
+            app = initializeApp(firebaseConfig);
+            
+            // Initialize Firestore
+            db = getFirestore(app);
+
+            // Initialize App Check (reCAPTCHA v3)
+            // Replace with your actual ReCaptcha v3 Site Key
+            appCheck = initializeAppCheck(app, {
+                provider: new ReCaptchaV3Provider('YOUR_RECAPTCHA_V3_SITE_KEY'),
+                isTokenAutoRefreshEnabled: true
+            });
+        } catch (error) {
+            console.warn("Firebase config is not completed. Please update keys.", error);
+        }
+
+        // Form Submit Handler
+        document.getElementById('votingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if(!db) {
+                Swal.fire('Error', 'Firebase is not configured correctly.', 'error');
+                return;
+            }
+
+            const name = document.getElementById('name').value.trim();
+            const mobile = document.getElementById('mobile').value.trim();
+            const voteOption = document.querySelector('input[name="voteOption"]:checked').value;
+            const submitBtn = document.getElementById('submitBtn');
+
+            // Validate Mobile
+            if (!/^\d{10}$/.test(mobile)) {
+                Swal.fire('Error', 'Please enter a valid 10-digit mobile number.', 'warning');
+                return;
+            }
+
+            try {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Verifying...';
+
+                // Check Firestore for duplicate mobile number
+                const votesRef = collection(db, "votes");
+                const q = query(votesRef, where("mobile", "==", mobile));
+                const querySnapshot = await getDocs(q);
+
+                if (!querySnapshot.empty) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Duplicate Vote',
+                        text: 'This mobile number has already been used to vote.'
+                    });
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Submit Vote';
+                    return;
+                }
+
+                submitBtn.innerText = 'Submitting...';
+
+                // Save to Firestore
+                await addDoc(votesRef, {
+                    name: name,
+                    mobile: mobile,
+                    vote: voteOption,
+                    district: "Ramanathapuram",
+                    timestamp: serverTimestamp()
+                });
+
+                // Mark device as voted
+                localStorage.setItem('hasVoted_ramnad2026', 'true');
+
+                // Success
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Thank You!',
+                    text: 'Your vote has been recorded successfully.',
+                    allowOutsideClick: false,
+                    showConfirmButton: false
+                });
+
+            } catch (error) {
+                console.error("Error submitting vote: ", error);
+                Swal.fire('Error', 'Failed to submit vote. Please try again.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Submit Vote';
+            }
+        });
+
+    </script>
+</body>
+</html>

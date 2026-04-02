@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voting Dashboard - Live Results</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-dark: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .unauthorized {
+            background: var(--card-dark);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--danger);
+            max-width: 400px;
+            margin: 100px auto;
+        }
+
+        .dashboard-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: none; /* hidden until validated */
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .pulse {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: var(--success);
+            border-radius: 50%;
+            margin-right: 8px;
+            box-shadow: 0 0 0 rgba(16, 185, 129, 0.4);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+        }
+
+        .stat-card {
+            background: var(--card-dark);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-title {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+
+        .stat-value {
+            font-size: 3.5rem;
+            font-weight: 800;
+        }
+
+        .total-value { color: var(--accent); }
+        .yes-value { color: var(--success); }
+        .no-value { color: var(--danger); }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            display: none;
+            backdrop-filter: blur(5px);
+        }
+
+        .loader {
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top: 4px solid var(--accent);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .timestamp {
+            text-align: center;
+            margin-top: 40px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="unauthorizedMsg" class="unauthorized" style="display: none;">
+        <span>🚫 Admin Access Required</span>
+    </div>
+
+    <!-- Full Screen Loader for Initial Fetch -->
+    <div id="loading" class="loading-overlay">
+        <div class="loader"></div>
+    </div>
+
+    <div id="dashboardContainer" class="dashboard-container">
+        <div class="header">
+            <h1>Ramanathapuram Voting Analytics</h1>
+            <p><span class="pulse"></span> Live Real-time Results</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-title">Total Votes</div>
+                <div id="totalCount" class="stat-value total-value">0</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-title">Yes Votes</div>
+                <div id="yesCount" class="stat-value yes-value">0</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-title">No Votes</div>
+                <div id="noCount" class="stat-value no-value">0</div>
+            </div>
+        </div>
+
+        <div class="timestamp">
+            Last Updated: <span id="lastUpdated">--</span>
+        </div>
+    </div>
+
+    <!-- Firebase v10 Modular SDK via CDN -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
+
+        // Admin Access Control Logic
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('admin') !== '12345') {
+            document.getElementById('unauthorizedMsg').style.display = 'block';
+            throw new Error("Unauthorized Access");
+        }
+        
+        // Show Dashboard Container & Initial Loader
+        document.getElementById('dashboardContainer').style.display = 'block';
+        document.getElementById('loading').style.display = 'flex';
+
+        // ==========================================
+        // FIREBASE CONFIGURATION (Replace with yours)
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        try {
+            // Initialize Firebase
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+
+            // Listen to Live Updates on 'votes' collection
+            const votesRef = collection(db, "votes");
+            
+            onSnapshot(votesRef, (snapshot) => {
+                let total = snapshot.size;
+                let yes = 0;
+                let no = 0;
+
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if(data.vote === "Yes") yes++;
+                    if(data.vote === "No") no++;
+                });
+
+                // Animate Numbers (Simple counter effect)
+                animateValue("totalCount", parseInt(document.getElementById('totalCount').innerText), total, 500);
+                animateValue("yesCount", parseInt(document.getElementById('yesCount').innerText), yes, 500);
+                animateValue("noCount", parseInt(document.getElementById('noCount').innerText), no, 500);
+
+                // Update Timestamp
+                const now = new Date();
+                document.getElementById('lastUpdated').innerText = now.toLocaleTimeString();
+
+                // Hide loader once the first snap is received
+                document.getElementById('loading').style.display = 'none';
+
+            }, (error) => {
+                console.error("Error fetching live data: ", error);
+                document.getElementById('loading').style.display = 'none';
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Connection Error',
+                    text: 'Failed to sync with the database. Please check your config.'
+                });
+            });
+
+        } catch (error) {
+            console.warn("Firebase config is not completed.", error);
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        // Helper function for number animation
+        function animateValue(id, start, end, duration) {
+            if (start === end) return;
+            const obj = document.getElementById(id);
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerHTML = Math.floor(progress * (end - start) + start);
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    obj.innerHTML = end;
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+    </script>
+</body>
+</html>
